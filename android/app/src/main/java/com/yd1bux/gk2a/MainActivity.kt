@@ -3,11 +3,10 @@ package com.yd1bux.gk2a
 import android.annotation.TargetApi
 import android.app.Activity
 import android.app.AlertDialog
-import android.app.DatePickerDialog
-import android.app.TimePickerDialog
 import android.content.ContentValues
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.RectF
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -20,6 +19,8 @@ import android.view.Gravity
 import android.view.View
 import android.view.WindowInsets
 import android.widget.Button
+import android.widget.CheckBox
+import android.widget.HorizontalScrollView
 import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.ProgressBar
@@ -35,7 +36,6 @@ import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZoneOffset
-import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.concurrent.Executors
@@ -138,7 +138,7 @@ class MainActivity : Activity() {
         val gif = findViewById<ImageButton>(R.id.gif)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             save.setOnClickListener { saveCurrent() }
-            gif.setOnClickListener { exportGif() }
+            gif.setOnClickListener { openGifDialog() }
         } else {
             save.visibility = View.GONE
             gif.visibility = View.GONE
@@ -377,7 +377,8 @@ class MainActivity : Activity() {
 
     // ------------------------------------------------------------------ arsip
 
-    private fun openArchive() {
+    /** Ambil archive.json (boleh gagal) lalu jalankan [then] di thread UI. */
+    private fun withArchive(then: (ArchiveIndex?) -> Unit) {
         Toast.makeText(this, R.string.loading_archive, Toast.LENGTH_SHORT).show()
         worker.execute {
             val index = try {
@@ -385,96 +386,34 @@ class MainActivity : Activity() {
             } catch (e: Exception) {
                 null
             }
-            main.post {
-                if (index == null || index.frames.isEmpty()) {
-                    Toast.makeText(this, R.string.archive_unavailable, Toast.LENGTH_LONG).show()
-                } else {
-                    showArchiveDialog(index)
-                }
-            }
+            main.post { then(index) }
         }
     }
 
-    private fun showArchiveDialog(archive: ArchiveIndex) {
-        val first = archive.frames.first().time
-        val last = archive.frames.last().time
-        var from = ZonedDateTime.ofInstant(maxOf(first, last.minus(Duration.ofHours(6))), wib)
-        var to = ZonedDateTime.ofInstant(last, wib)
-
-        val box = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(24), dp(8), dp(24), 0)
+    private fun openArchive() = withArchive { index ->
+        if (index == null || index.frames.isEmpty()) {
+            Toast.makeText(this, R.string.archive_unavailable, Toast.LENGTH_LONG).show()
+        } else {
+            showArchiveDialog(index.frames)
         }
-        box.addView(TextView(this).apply {
-            text = getString(R.string.archive_hint, dateFormat.format(first), dateFormat.format(last))
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-        })
+    }
 
-        fun row(label: Int): Pair<Button, Button> {
-            val line = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-                setPadding(0, dp(8), 0, 0)
-            }
-            line.addView(TextView(this).apply { setText(label) }, LinearLayout.LayoutParams(dp(64), -2))
-            val date = Button(this)
-            val time = Button(this)
-            line.addView(date, LinearLayout.LayoutParams(0, -2, 1.4f))
-            line.addView(time, LinearLayout.LayoutParams(0, -2, 1f))
-            box.addView(line)
-            return date to time
-        }
+    private fun dialogBox() = LinearLayout(this).apply {
+        orientation = LinearLayout.VERTICAL
+        setPadding(dp(24), dp(8), dp(24), 0)
+    }
 
-        val (fromDate, fromTime) = row(R.string.from)
-        val (toDate, toTime) = row(R.string.to)
-        fun refresh() {
-            fromDate.text = dateFormat.format(from)
-            fromTime.text = hourFormat.format(from)
-            toDate.text = dateFormat.format(to)
-            toTime.text = hourFormat.format(to)
-        }
-        refresh()
+    private fun hint(all: List<Frame>) = TextView(this).apply {
+        text = getString(R.string.archive_hint, dateFormat.format(all.first().time), dateFormat.format(all.last().time))
+        setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+    }
 
-        fun pickDate(get: () -> ZonedDateTime, set: (ZonedDateTime) -> Unit) {
-            val d = get()
-            DatePickerDialog(this, { _, y, m, day ->
-                set(d.withYear(y).withMonth(m + 1).withDayOfMonth(day))
-                refresh()
-            }, d.year, d.monthValue - 1, d.dayOfMonth).apply {
-                datePicker.minDate = first.minus(Duration.ofDays(1)).toEpochMilli()
-                datePicker.maxDate = last.plus(Duration.ofDays(1)).toEpochMilli()
-            }.show()
-        }
-
-        fun pickTime(get: () -> ZonedDateTime, set: (ZonedDateTime) -> Unit) {
-            val d = get()
-            TimePickerDialog(this, { _, h, m ->
-                set(d.withHour(h).withMinute(m / 10 * 10))
-                refresh()
-            }, d.hour, d.minute, true).show()
-        }
-
-        fromDate.setOnClickListener { pickDate({ from }, { from = it }) }
-        fromTime.setOnClickListener { pickTime({ from }, { from = it }) }
-        toDate.setOnClickListener { pickDate({ to }, { to = it }) }
-        toTime.setOnClickListener { pickTime({ to }, { to = it }) }
-
-        box.addView(TextView(this).apply {
-            setText(R.string.step)
-            setPadding(0, dp(12), 0, 0)
-        })
-        val steps = listOf(10 to R.string.step_10, 30 to R.string.step_30, 60 to R.string.step_60)
-        val group = RadioGroup(this).apply { orientation = RadioGroup.HORIZONTAL }
-        val stepIds = steps.map { (minutes, label) ->
-            val rb = RadioButton(this).apply {
-                id = View.generateViewId()
-                setText(label)
-            }
-            group.addView(rb)
-            rb.id to minutes
-        }.toMap()
-        group.check(stepIds.keys.first())
-        box.addView(group)
+    private fun showArchiveDialog(all: List<Frame>) {
+        val last = all.last().time
+        val form = RangeForm(this, wib, all.first().time, last, maxOf(all.first().time, last.minus(Duration.ofHours(6))), last)
+        val box = dialogBox()
+        box.addView(hint(all))
+        box.addView(form.view)
 
         val dialog = AlertDialog.Builder(this)
             .setTitle(R.string.archive_title)
@@ -485,22 +424,15 @@ class MainActivity : Activity() {
             .create()
         dialog.setOnShowListener {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                val a = from.toInstant()
-                val b = to.toInstant()
-                val stepMinutes = stepIds[group.checkedRadioButtonId] ?: 10
-                val selected = archive.frames.filter {
-                    !it.time.isBefore(a) && !it.time.isAfter(b) && (it.time.epochSecond / 60) % stepMinutes == 0L
-                }
+                val selected = form.select(all)
                 when {
-                    !a.isBefore(b) -> toast(R.string.range_invalid)
+                    !form.isValid() -> toast(R.string.range_invalid)
                     selected.isEmpty() -> toast(R.string.archive_empty)
                     selected.size > MAX_ARCHIVE_FRAMES ->
                         toast(getString(R.string.archive_too_many, selected.size, MAX_ARCHIVE_FRAMES))
                     else -> {
                         dialog.dismiss()
-                        val label = "${dayFormat.format(a)} ${hourFormat.format(a)} – " +
-                            "${dayFormat.format(b)} ${hourFormat.format(b)} WIB"
-                        setMode(Mode.Archive(selected, label))
+                        setMode(Mode.Archive(selected, form.label()))
                     }
                 }
             }
@@ -528,51 +460,134 @@ class MainActivity : Activity() {
         }
     }
 
-    /** Buat GIF dari frame yang sedang dimuat (mode live atau rentang arsip), simpan ke galeri. */
-    @TargetApi(Build.VERSION_CODES.Q)
-    private fun exportGif() {
+    /** Dialog "Buat GIF": rentang waktu dari arsip + frame live, kecepatan, ukuran, efek. */
+    private fun openGifDialog() {
         if (exporting) return
-        val list = readyIndices().map { frames[it] }
-        if (list.size < 2) {
-            toast(R.string.gif_need_frames)
-            return
+        val crop = image.visibleFraction()
+        withArchive { index ->
+            // Gabungkan arsip dan frame live (berdasarkan nama file, jadi tidak ada duplikat).
+            val all = ((index?.frames ?: emptyList()) + frames)
+                .associateBy { it.fileName }.values.sortedBy { it.time }
+            if (all.size < 2) {
+                toast(R.string.gif_need_frames)
+                return@withArchive
+            }
+            showGifDialog(all, crop)
         }
+    }
+
+    private fun showGifDialog(all: List<Frame>, crop: RectF?) {
+        val shown = readyIndices().map { frames[it].time }
+        val initialFrom = shown.firstOrNull() ?: maxOf(all.first().time, all.last().time.minus(Duration.ofHours(3)))
+        val initialTo = shown.lastOrNull() ?: all.last().time
+        val form = RangeForm(this, wib, all.first().time, all.last().time, initialFrom, initialTo)
+        val box = dialogBox()
+        box.addView(hint(all))
+        box.addView(form.view)
+
+        fun radios(title: Int, options: List<Pair<String, Int>>, default: Int): () -> Int {
+            box.addView(form.label(title))
+            val group = RadioGroup(this).apply { orientation = RadioGroup.HORIZONTAL }
+            val ids = HashMap<Int, Int>()
+            for ((text, value) in options) {
+                val rb = RadioButton(this).apply {
+                    id = View.generateViewId()
+                    this.text = text
+                }
+                ids[rb.id] = value
+                group.addView(rb)
+                if (value == default) group.check(rb.id)
+            }
+            box.addView(HorizontalScrollView(this).apply { addView(group) })
+            group.setOnCheckedChangeListener { _, _ -> form.onChange() }
+            return { ids[group.checkedRadioButtonId] ?: default }
+        }
+
+        val speed = radios(R.string.gif_speed, listOf(
+            getString(R.string.speed_slow) to 20, getString(R.string.speed_normal) to 12,
+            getString(R.string.speed_fast) to 8, getString(R.string.speed_very_fast) to 5,
+        ), 8)
+        val size = radios(R.string.gif_size, listOf("640 px" to 640, "800 px" to 800, "1080 px" to 1080), 800)
+
+        fun check(text: Int, on: Boolean) = CheckBox(this).apply {
+            setText(text)
+            isChecked = on
+            setOnCheckedChangeListener { _, _ -> form.onChange() }
+            box.addView(this)
+        }
+        box.addView(form.label(R.string.gif_effects))
+        val smooth = check(R.string.gif_smooth, true)
+        val bounce = check(R.string.gif_bounce, false)
+        val hold = check(R.string.gif_hold, true)
+        val zoomOnly = check(R.string.gif_zoom_only, crop != null).apply { isEnabled = crop != null }
+        if (crop == null) zoomOnly.setText(R.string.gif_zoom_hint)
+
+        val summary = TextView(this).apply {
+            setPadding(0, dp(12), 0, dp(8))
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+        }
+        box.addView(summary)
+
+        val maker = GifMaker(repo)
+        fun options() = GifOptions(
+            width = size(), delayCs = speed(), smooth = smooth.isChecked, bounce = bounce.isChecked,
+            holdEnd = hold.isChecked, crop = if (zoomOnly.isChecked) crop else null,
+        )
+        // Rasio tinggi/lebar gambar (dari frame yang sudah dimuat), untuk perkiraan ukuran file.
+        val aspect = previews.values.firstOrNull()?.let { it.height.toFloat() / it.width } ?: 0.406f
+        form.onChange = {
+            val n = form.select(all).size
+            val o = options()
+            val ratio = o.crop?.let { aspect * it.height() / it.width() } ?: aspect
+            val frameCount = maker.outputFrames(n, o)
+            // Hasil uji: ~0,5 byte per piksel per frame untuk citra awan.
+            val mb = frameCount * o.width * (o.width * ratio) * 0.5 / 1_000_000
+            summary.text = getString(R.string.gif_summary, n, frameCount,
+                String.format(Locale.US, "%.1f", maker.durationSeconds(n, o)),
+                String.format(Locale.US, "%.0f", mb.coerceAtLeast(1.0)))
+        }
+        form.onChange()
+
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(R.string.gif_title)
+            .setView(ScrollView(this).apply { addView(box) })
+            .setPositiveButton(R.string.gif_create, null)
+            .setNegativeButton(android.R.string.cancel, null)
+            .create()
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val selected = form.select(all)
+                when {
+                    !form.isValid() -> toast(R.string.range_invalid)
+                    selected.size < 2 -> toast(R.string.archive_empty)
+                    selected.size > MAX_ARCHIVE_FRAMES ->
+                        toast(getString(R.string.archive_too_many, selected.size, MAX_ARCHIVE_FRAMES))
+                    else -> {
+                        dialog.dismiss()
+                        runGif(selected, options())
+                    }
+                }
+            }
+        }
+        dialog.show()
+    }
+
+    @TargetApi(Build.VERSION_CODES.Q)
+    private fun runGif(list: List<Frame>, o: GifOptions) {
         exporting = true
         setPlaying(false)
-        val delayCs = (SPEEDS[speedIndex].second / 10).toInt()
         val name = "YD1BUX-gk2a_${stampFormat.format(list.first().time)}_${stampFormat.format(list.last().time)}.gif"
-        status.text = getString(R.string.gif_progress, 0, list.size)
+        status.text = getString(R.string.gif_download, 0, list.size)
         worker.execute {
             var uri: Uri? = null
             try {
-                val width = if (list.size > 48) 640 else 800
-                val first = repo.decodePreview(repo.fileFor(list[0]), width)
-                    ?: throw IllegalStateException("decode failed")
-                val height = first.height * width / first.width
-                first.recycle()
-                // Palet dari contoh piksel semua frame (versi kecil), lalu encode frame satu per satu.
-                val sw = 200
-                val sh = height * sw / width
-                val samples = list.mapNotNull { f ->
-                    repo.decodeExact(repo.fileFor(f), sw, sh)?.let { b ->
-                        IntArray(sw * sh).also { b.getPixels(it, 0, sw, 0, 0, sw, sh); b.recycle() }
-                    }
-                }
-                val palette = Palette.build(samples)
                 uri = insertImage(name, "image/gif")
                 val out = contentResolver.openOutputStream(uri) ?: throw IllegalStateException("no stream")
                 out.buffered().use { stream ->
-                    val enc = GifEncoder(stream, width, height, palette)
-                    enc.start()
-                    val px = IntArray(width * height)
-                    list.forEachIndexed { i, f ->
-                        val bmp = repo.decodeExact(repo.fileFor(f), width, height) ?: return@forEachIndexed
-                        bmp.getPixels(px, 0, width, 0, 0, width, height)
-                        bmp.recycle()
-                        enc.addFrame(px, if (i == list.lastIndex) LAST_FRAME_PAUSE_MS.toInt() / 10 else delayCs)
-                        main.post { status.text = getString(R.string.gif_progress, i + 1, list.size) }
+                    GifMaker(repo).make(list, o, stream) { phase, done, total ->
+                        val res = if (phase == GifMaker.Phase.DOWNLOAD) R.string.gif_download else R.string.gif_progress
+                        main.post { status.text = getString(res, done, total) }
                     }
-                    enc.finish()
                 }
                 publish(uri)
                 val saved = uri

@@ -176,6 +176,16 @@ def make_frame(t, channel_keys, products, res, width, out_path):
 
 
 # ---------------------------------------------------------------- animasi & situs
+def is_blank(path):
+    """Frame rusak yang hampir seluruhnya hitam (mis. true_color di malam hari tanpa komposit IR)."""
+    with Image.open(path) as im:
+        im = im.convert("RGB")
+        im.thumbnail((300, 150))
+        px = im.get_flattened_data() if hasattr(im, "get_flattened_data") else im.getdata()
+        dark = sum(1 for p in px if max(p) < 12)
+        return dark / (im.width * im.height) > 0.5
+
+
 def frame_time(path):
     return dt.datetime.strptime(path.stem.split("_")[1], "%Y%m%d%H%M").replace(tzinfo=dt.timezone.utc)
 
@@ -245,6 +255,10 @@ def main():
     start = end - dt.timedelta(hours=args.hours)
 
     scenes = available_scenes(start, end, PRODUCT_CHANNELS[products[-1]])
+    for f in frames_dir.glob("gk2a_*.jpg"):
+        if is_blank(f):
+            log.warning("%s hampir seluruhnya hitam; dihapus dan dibuat ulang", f.name)
+            f.unlink()
     existing = {frame_time(f) for f in frames_dir.glob("gk2a_*.jpg")}
     todo = sorted((t for t in scenes if t not in existing), reverse=True)[:args.max_new]
     log.info("%d scene tersedia, %d frame sudah ada, memproses %d", len(scenes), len(existing), len(todo))

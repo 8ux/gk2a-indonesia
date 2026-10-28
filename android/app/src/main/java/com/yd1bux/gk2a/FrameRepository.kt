@@ -2,6 +2,8 @@ package com.yd1bux.gk2a
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.BitmapRegionDecoder
+import android.graphics.Rect
 import org.json.JSONObject
 import java.io.File
 import java.io.IOException
@@ -98,6 +100,29 @@ class FrameRepository(private val baseUrl: String, cacheRoot: File) {
         val bmp = BitmapFactory.decodeFile(file.path, opts) ?: return null
         if (bmp.width == width && bmp.height == height) return bmp
         return Bitmap.createScaledBitmap(bmp, width, height, true).also { if (it !== bmp) bmp.recycle() }
+    }
+
+    /** Lebar & tinggi asli file gambar. */
+    fun dimensions(file: File): Pair<Int, Int> {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(file.path, bounds)
+        return bounds.outWidth to bounds.outHeight
+    }
+
+    /** Potongan [region] dari gambar, diskalakan persis ke [width] x [height] (ARGB). */
+    @Suppress("DEPRECATION")
+    fun decodeRegion(file: File, region: Rect, width: Int, height: Int): Bitmap? {
+        val decoder = BitmapRegionDecoder.newInstance(file.path, false) ?: return null
+        try {
+            var sample = 1
+            while (region.width() / (sample * 2) >= width) sample *= 2
+            val bmp = decoder.decodeRegion(region, BitmapFactory.Options().apply { inSampleSize = sample })
+                ?: return null
+            if (bmp.width == width && bmp.height == height) return bmp
+            return Bitmap.createScaledBitmap(bmp, width, height, true).also { if (it !== bmp) bmp.recycle() }
+        } finally {
+            decoder.recycle()
+        }
     }
 
     private fun sampleSize(file: File, targetWidth: Int): Int {

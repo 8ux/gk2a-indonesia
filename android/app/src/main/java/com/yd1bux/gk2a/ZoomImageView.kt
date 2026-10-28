@@ -81,6 +81,22 @@ class ZoomImageView @JvmOverloads constructor(
         return true
     }
 
+    /** Bagian gambar yang sedang terlihat (0..1 terhadap lebar/tinggi gambar), atau null bila tidak di-zoom. */
+    fun visibleFraction(): RectF? {
+        val d = drawable ?: return null
+        if (userScale() < 1.05f) return null
+        val inverse = Matrix()
+        if (!drawMatrix.invert(inverse)) return null
+        val r = RectF(0f, 0f, width.toFloat(), height.toFloat())
+        inverse.mapRect(r)
+        val w = d.intrinsicWidth.toFloat()
+        val h = d.intrinsicHeight.toFloat()
+        return RectF(
+            (r.left / w).coerceIn(0f, 1f), (r.top / h).coerceIn(0f, 1f),
+            (r.right / w).coerceIn(0f, 1f), (r.bottom / h).coerceIn(0f, 1f),
+        )
+    }
+
     private fun userScale(): Float {
         userMatrix.getValues(values)
         return values[Matrix.MSCALE_X]
