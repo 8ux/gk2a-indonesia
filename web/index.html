@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GK2A Indonesia</title>
+<style>
+  :root { --bg:#0d1117; --panel:#161b22; --text:#e6edf3; --muted:#8b949e; --accent:#58a6ff; --line:#30363d; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.5 system-ui, sans-serif; }
+  main { max-width:1400px; margin:0 auto; padding:16px; }
+  h1 { font-size:20px; margin:0 0 4px; }
+  .muted { color:var(--muted); font-size:13px; }
+  .viewer { margin-top:12px; background:var(--panel); border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+  .viewer img { display:block; width:100%; height:auto; background:#000; }
+  .controls { display:flex; flex-wrap:wrap; gap:10px; align-items:center; padding:10px 12px; }
+  .controls input[type=range] { flex:1 1 200px; accent-color:var(--accent); }
+  button, select { background:var(--bg); color:var(--text); border:1px solid var(--line); border-radius:6px;
+                   padding:6px 12px; font:inherit; cursor:pointer; }
+  button:hover { border-color:var(--accent); }
+  #time { font-variant-numeric:tabular-nums; min-width:15ch; }
+  .links { margin-top:12px; display:flex; flex-wrap:wrap; gap:16px; }
+  a { color:var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <h1>GK2A True Color: Indonesia</h1>
+  <div class="muted" id="status">Memuat…</div>
+
+  <div class="viewer">
+    <img id="frame" alt="Citra GK2A wilayah Indonesia">
+    <div class="controls">
+      <button id="play" aria-label="Putar atau jeda">⏸</button>
+      <button id="prev" aria-label="Frame sebelumnya">◀</button>
+      <button id="next" aria-label="Frame berikutnya">▶</button>
+      <input id="slider" type="range" min="0" max="0" value="0" aria-label="Pilih frame">
+      <span id="time"></span>
+      <select id="speed" aria-label="Kecepatan">
+        <option value="400">Lambat</option>
+        <option value="200" selected>Normal</option>
+        <option value="100">Cepat</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="links">
+    <a href="latest.jpg">Citra terbaru (JPG)</a>
+    <a href="animation.mp4">Animasi MP4</a>
+    <a href="animation.gif">Animasi GIF</a>
+    <a href="frames.json">frames.json</a>
+  </div>
+  <p class="muted">Sumber data: GEO-KOMPSAT-2A (KMA/NMSC), arsip publik NOAA Open Data Dissemination di AWS.
+     Diproses dengan Satpy. Malam hari ditampilkan awan inframerah di atas citra lampu kota (NASA Black Marble).</p>
+</main>
+<script>
+const img = document.getElementById('frame'), slider = document.getElementById('slider'),
+      timeEl = document.getElementById('time'), playBtn = document.getElementById('play'),
+      speedSel = document.getElementById('speed'), statusEl = document.getElementById('status');
+let frames = [], cache = [], idx = 0, playing = true, timer = null;
+
+const fmt = iso => {
+  const d = new Date(iso);
+  const wib = new Date(d.getTime() + 7 * 3600e3);
+  const p = n => String(n).padStart(2, '0');
+  return `${p(wib.getUTCDate())}/${p(wib.getUTCMonth() + 1)} ${p(wib.getUTCHours())}:${p(wib.getUTCMinutes())} WIB`;
+};
+
+function show(i) {
+  idx = (i + frames.length) % frames.length;
+  img.src = cache[idx].src;
+  slider.value = idx;
+  timeEl.textContent = fmt(frames[idx].time);
+}
+
+function schedule() {
+  clearTimeout(timer);
+  if (!playing) return;
+  // Jeda lebih lama di frame terbaru.
+  const delay = idx === frames.length - 1 ? 1500 : +speedSel.value;
+  timer = setTimeout(() => { show(idx + 1); schedule(); }, delay);
+}
+
+function setPlaying(p) { playing = p; playBtn.textContent = p ? '⏸' : '▶︎'; schedule(); }
+
+playBtn.onclick = () => setPlaying(!playing);
+document.getElementById('prev').onclick = () => { setPlaying(false); show(idx - 1); };
+document.getElementById('next').onclick = () => { setPlaying(false); show(idx + 1); };
+slider.oninput = () => { setPlaying(false); show(+slider.value); };
+speedSel.onchange = schedule;
+
+fetch('frames.json?t=' + Date.now()).then(r => r.json()).then(m => {
+  frames = m.frames;
+  slider.max = frames.length - 1;
+  cache = frames.map(f => { const im = new Image(); im.src = f.url; return im; });
+  statusEl.textContent = `${frames.length} frame · terakhir ${fmt(frames[frames.length - 1].time)} · ` +
+                         `diperbarui ${fmt(m.updated)}`;
+  show(frames.length - 1);
+  schedule();
+}).catch(() => { statusEl.textContent = 'Gagal memuat frames.json'; });
+</script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+satpy==0.60.0
+pyspectral==0.14.3
+pyresample==1.35.0
+pyproj==3.8.0
+dask==2026.8.0
+xarray==2026.9.0
+numpy==2.5.4
+h5netcdf==1.8.2
+h5py==3.16.0
+netCDF4==1.7.5.1.post1
+fsspec==2026.9.0
+aiohttp==3.14.5
+requests==2.34.2
+pillow==13.0.0
+rasterio==1.5.2
+pooch==1.9.0

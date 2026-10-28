@@ -1,0 +1,72 @@
+name: GK2A Indonesia
+
+on:
+  schedule:
+    # GK2A memotret full disk tiap 10 menit; data muncul di AWS ~20 menit kemudian.
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+    inputs:
+      hours:
+        description: "Panjang animasi (jam)"
+        default: "3"
+      max_new:
+        description: "Maksimum frame baru yang diproses"
+        default: "3"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gk2a
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Instal dependensi
+        run: |
+          command -v ffmpeg || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)
+          pip install -r requirements.txt
+
+      # Tabel koreksi Rayleigh (pyspectral) & citra Black Marble (satpy) cukup diunduh sekali.
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.local/share/pyspectral
+            ~/.local/share/satpy
+          key: aux-data-v1
+
+      - name: Ambil frame sebelumnya dari branch gh-pages
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          git clone --depth 1 --branch gh-pages \
+            "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" site \
+            || mkdir -p site
+          rm -rf site/.git
+
+      - name: Proses citra GK2A
+        run: |
+          python scripts/gk2a_indonesia.py --site site \
+            --hours "${{ inputs.hours || '3' }}" \
+            --max-new "${{ inputs.max_new || '3' }}"
+
+      - name: Publikasikan ke GitHub Pages (branch gh-pages)
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site
+          publish_branch: gh-pages
+          force_orphan: true  # riwayat gh-pages tidak menumpuk
+          user_name: github-actions[bot]
+          user_email: 41898282+github-actions[bot]@users.noreply.github.com
+          commit_message: "Update citra GK2A"
