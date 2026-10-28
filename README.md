@@ -54,14 +54,29 @@ lalu `true_color_raw`.
 5. Citra bisa dilihat di `https://USERNAME.github.io/gk2a-indonesia/`.
    Animasi penuh 3 jam akan terisi dalam sekitar 1 jam pertama.
 
+## Arsip citra
+
+Setiap frame juga disimpan ke **GitHub Releases**, satu release per hari (`archive-YYYYMMDD`, waktu UTC),
+selama 30 hari. GitHub Pages dibatasi 1 GB, jadi arsip tidak disimpan di sana. Daftar frame yang tersedia ada di
+`archive.json` di situs, yang dipakai aplikasi Android untuk filter tanggal dan jam.
+
+Untuk mengisi arsip tanggal yang sudah lewat (maksimal 30 hari ke belakang, sesuai masa simpan), jalankan workflow
+**GK2A Backfill Arsip** dari tab Actions. Isi `end` dengan waktu akhir UTC (`YYYYmmddHHMM`) dan `hours` dengan
+jumlah jam ke belakang (maks 24). Prosesnya sekitar 1 menit per frame, atau 6 frame per jam data.
+Hasilnya muncul di aplikasi setelah run GK2A Indonesia berikutnya.
+
 ## Aplikasi Android: YD1BUX-gk2a
 
 Kode aplikasi ada di folder `android/` (Kotlin, tanpa library tambahan). Setiap ada perubahan di folder itu,
 workflow **Android APK** membuat APK dan menerbitkannya di GitHub Releases.
 
 - Unduh APK terbaru: https://github.com/8ux/gk2a-indonesia/releases/latest/download/YD1BUX-gk2a.apk
-- Fitur: animasi frame 3 jam terakhir, pinch-zoom (otomatis memuat resolusi penuh saat dijeda),
-  pilihan kecepatan, simpan gambar ke galeri (Android 10+), dan cek citra baru otomatis tiap 5 menit.
+- Fitur:
+  - Animasi frame 3 jam terakhir, cek citra baru otomatis tiap 5 menit.
+  - **Arsip**: pilih rentang tanggal & jam (WIB) dengan interval 10 menit, 30 menit, atau 1 jam (maks 144 frame).
+  - **Buat GIF** dari frame yang sedang ditampilkan (live atau arsip), simpan ke galeri, lalu bagikan.
+  - Pinch-zoom (otomatis memuat resolusi penuh saat dijeda), pilihan kecepatan, simpan gambar ke galeri.
+  - Simpan gambar dan GIF butuh Android 10+.
 - Bahasa: Inggris, atau Indonesia bila bahasa HP diatur ke Bahasa Indonesia.
 - Minimal Android 8.0.
 

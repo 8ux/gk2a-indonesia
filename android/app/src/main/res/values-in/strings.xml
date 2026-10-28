@@ -17,4 +17,27 @@
     <string name="speed">Kecepatan animasi</string>
     <string name="hint">Cubit untuk zoom · ketuk dua kali untuk zoom atau reset</string>
     <string name="source">Data: GK2A AMI (KMA/NMSC) via NOAA Open Data</string>
+    <string name="archive">Arsip</string>
+    <string name="archive_title">Arsip: pilih rentang waktu</string>
+    <string name="archive_hint">Waktu dalam WIB (UTC+7). Tersedia dari %1$s sampai %2$s.</string>
+    <string name="loading_archive">Memuat arsip…</string>
+    <string name="archive_unavailable">Arsip belum tersedia. Arsip terisi seiring citra baru masuk.</string>
+    <string name="archive_empty">Tidak ada citra arsip di rentang ini</string>
+    <string name="archive_too_many">Terlalu banyak frame (%1$d). Pilih rentang lebih pendek atau interval lebih besar (maks %2$d).</string>
+    <string name="range_invalid">Waktu akhir harus setelah waktu awal</string>
+    <string name="from">Dari</string>
+    <string name="to">Sampai</string>
+    <string name="step">Interval</string>
+    <string name="step_10">10 menit</string>
+    <string name="step_30">30 menit</string>
+    <string name="step_60">1 jam</string>
+    <string name="show">Tampilkan</string>
+    <string name="live">Live</string>
+    <string name="status_archive">Arsip · %1$s · %2$d frame · ketuk untuk live</string>
+    <string name="gif">Buat GIF</string>
+    <string name="gif_progress">Membuat GIF %1$d/%2$d…</string>
+    <string name="gif_saved">GIF tersimpan di Pictures/YD1BUX-gk2a.</string>
+    <string name="gif_failed">Gagal membuat GIF</string>
+    <string name="gif_need_frames">Tunggu sampai minimal 2 frame dimuat</string>
+    <string name="share">Bagikan</string>
 </resources>

@@ -11,8 +11,8 @@
     </style>
 
     <style name="ControlButton">
-        <item name="android:layout_width">52dp</item>
-        <item name="android:layout_height">52dp</item>
+        <item name="android:layout_width">48dp</item>
+        <item name="android:layout_height">48dp</item>
         <item name="android:background">?android:attr/selectableItemBackgroundBorderless</item>
         <item name="android:tint">@color/text</item>
         <item name="android:scaleType">center</item>

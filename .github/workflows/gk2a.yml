@@ -60,6 +60,13 @@ jobs:
             --hours "${{ inputs.hours || '3' }}" \
             --max-new "${{ inputs.max_new || '3' }}"
 
+      # Simpan frame ke GitHub Releases (arsip 30 hari) + tulis archive.json untuk aplikasi.
+      - name: Arsipkan frame
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python scripts/archive.py --site site --days 30
+
       - name: Publikasikan ke GitHub Pages (branch gh-pages)
         uses: peaceiris/actions-gh-pages@v4.1.0
         with:

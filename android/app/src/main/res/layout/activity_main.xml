@@ -15,7 +15,7 @@
         android:orientation="horizontal"
         android:paddingStart="16dp"
         android:paddingTop="8dp"
-        android:paddingEnd="4dp"
+        android:paddingEnd="0dp"
         android:paddingBottom="8dp">
 
         <LinearLayout
@@ -40,6 +40,18 @@
                 android:textColor="@color/muted"
                 android:textSize="13sp" />
         </LinearLayout>
+
+        <ImageButton
+            android:id="@+id/archive"
+            style="@style/ControlButton"
+            android:contentDescription="@string/archive"
+            android:src="@drawable/ic_calendar" />
+
+        <ImageButton
+            android:id="@+id/gif"
+            style="@style/ControlButton"
+            android:contentDescription="@string/gif"
+            android:src="@drawable/ic_gif" />
 
         <ImageButton
             android:id="@+id/save"

@@ -45,7 +45,14 @@ jobs:
           SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
         run: |
           chmod +x gradlew
-          ./gradlew --no-daemon assembleRelease
+          ./gradlew --no-daemon assembleRelease 2>&1 | tee build.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            # Tampilkan error sebagai anotasi supaya terbaca tanpa membuka log lengkap.
+            grep -E "^e: |error:|ERROR:|What went wrong" -A3 build.log | head -40 \
+              | while IFS= read -r line; do echo "::error::$line"; done
+            exit "$status"
+          fi
           cp app/build/outputs/apk/release/app-release.apk YD1BUX-gk2a.apk
 
       # Tiap build jadi GitHub Release baru; link .../releases/latest/download/YD1BUX-gk2a.apk

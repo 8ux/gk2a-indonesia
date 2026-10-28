@@ -1,0 +1,57 @@
+name: GK2A Backfill Arsip
+
+# Isi arsip untuk waktu lampau (data NOAA tersedia sejak 2023). Contoh: end = 202610280600, hours = 12
+# membuat semua frame 18:00 UTC tanggal 27 s/d 06:00 UTC tanggal 28 Oktober.
+on:
+  workflow_dispatch:
+    inputs:
+      end:
+        description: "Waktu akhir UTC (YYYYmmddHHMM)"
+        required: true
+      hours:
+        description: "Jumlah jam ke belakang (maks 24)"
+        default: "6"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gk2a-backfill
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Instal dependensi
+        run: pip install -r requirements.txt
+
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.local/share/pyspectral
+            ~/.local/share/satpy
+          key: aux-data-v1
+
+      - name: Buat frame
+        env:
+          END: ${{ inputs.end }}
+          HOURS: ${{ inputs.hours }}
+        run: |
+          H=$(python -c "import sys; print(min(24.0, float(sys.argv[1])))" "$HOURS")
+          python scripts/gk2a_indonesia.py --site backfill --end "$END" --hours "$H" \
+            --max-new 1000 --frames-only
+
+      # archive.json diperbarui otomatis oleh run GK2A Indonesia berikutnya.
+      - name: Arsipkan frame
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python scripts/archive.py --site backfill --days 30 --no-index

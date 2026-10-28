@@ -230,6 +230,8 @@ def main():
     p.add_argument("--anim-width", type=int, default=1280, help="lebar animasi MP4 (piksel)")
     p.add_argument("--fps", type=int, default=6)
     p.add_argument("--end", help="waktu akhir UTC, format YYYYmmddHHMM (default: sekarang)")
+    p.add_argument("--frames-only", action="store_true",
+                   help="hanya buat frame (untuk backfill arsip), tanpa animasi & file situs")
     args = p.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
@@ -256,6 +258,9 @@ def main():
         if frame_time(f) < start:
             f.unlink()
     frames = sorted(frames_dir.glob("gk2a_*.jpg"), key=frame_time)
+    if args.frames_only:
+        log.info("Selesai: %d frame", len(frames))
+        return 0
     if not frames:
         log.error("Belum ada frame yang berhasil dibuat")
         return 1

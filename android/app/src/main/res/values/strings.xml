@@ -19,4 +19,27 @@
     <string name="speed">Animation speed</string>
     <string name="hint">Pinch to zoom · double-tap to zoom in or reset</string>
     <string name="source">Data: GK2A AMI (KMA/NMSC) via NOAA Open Data</string>
+    <string name="archive">Archive</string>
+    <string name="archive_title">Archive: choose time range</string>
+    <string name="archive_hint">Times in WIB (UTC+7). Available from %1$s to %2$s.</string>
+    <string name="loading_archive">Loading archive…</string>
+    <string name="archive_unavailable">The archive is not available yet. It fills up as new images arrive.</string>
+    <string name="archive_empty">No archived images in this range</string>
+    <string name="archive_too_many">Too many frames (%1$d). Choose a shorter range or a larger step (max %2$d).</string>
+    <string name="range_invalid">The end time must be after the start time</string>
+    <string name="from">From</string>
+    <string name="to">To</string>
+    <string name="step">Interval</string>
+    <string name="step_10">10 min</string>
+    <string name="step_30">30 min</string>
+    <string name="step_60">1 hour</string>
+    <string name="show">Show</string>
+    <string name="live">Live</string>
+    <string name="status_archive">Archive · %1$s · %2$d frames · tap for live</string>
+    <string name="gif">Create GIF</string>
+    <string name="gif_progress">Creating GIF %1$d/%2$d…</string>
+    <string name="gif_saved">GIF saved to Pictures/YD1BUX-gk2a.</string>
+    <string name="gif_failed">Could not create the GIF</string>
+    <string name="gif_need_frames">Wait until at least 2 frames are loaded</string>
+    <string name="share">Share</string>
 </resources>
