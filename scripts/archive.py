@@ -43,14 +43,14 @@ def list_archive_releases(s, repo):
 
 
 def all_assets(s, repo, rel):
-    """Daftar lengkap nama asset (endpoint releases hanya memuat sebagian bila asset banyak)."""
-    names, url = set(), f"{API}/repos/{repo}/releases/{rel['id']}/assets?per_page=100"
+    """{nama: (id, ukuran)} semua asset (endpoint releases hanya memuat sebagian bila asset banyak)."""
+    assets, url = {}, f"{API}/repos/{repo}/releases/{rel['id']}/assets?per_page=100"
     while url:
         r = s.get(url, timeout=60)
         r.raise_for_status()
-        names |= {a["name"] for a in r.json()}
+        assets.update({a["name"]: (a["id"], a["size"]) for a in r.json()})
         url = r.links.get("next", {}).get("url")
-    return names
+    return assets
 
 
 def create_release(s, repo, tag, day):
@@ -93,14 +93,19 @@ def main():
         tag = f"archive-{m.group(1)}"
         if tag not in releases:
             releases[tag] = create_release(s, repo, tag, m.group(1))
-            assets[tag] = set()
-        if f.name in assets[tag]:
+            assets[tag] = {}
+        old = assets[tag].get(f.name)
+        if old and old[1] == f.stat().st_size:
             continue
+        if old:
+            # Frame dibuat ulang (mis. dulu hitam): ganti asset lama.
+            s.delete(f"{API}/repos/{repo}/releases/assets/{old[0]}", timeout=60).raise_for_status()
+            log.info("%s diganti dengan versi baru", f.name)
         rel = releases[tag]
         r = s.post(f"{UPLOADS}/repos/{repo}/releases/{rel['id']}/assets", params={"name": f.name},
                    headers={"Content-Type": "image/jpeg"}, data=f.read_bytes(), timeout=120)
         r.raise_for_status()
-        assets[tag].add(f.name)
+        assets[tag][f.name] = (r.json()["id"], f.stat().st_size)
         uploaded += 1
     log.info("%d frame baru diarsipkan", uploaded)
 
