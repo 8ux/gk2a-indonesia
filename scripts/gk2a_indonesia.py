@@ -52,6 +52,8 @@ ROOT = Path(__file__).resolve().parent.parent
 LINES_FILE = ROOT / "data" / "indonesia_lines.json"
 SATPY_CONFIG = ROOT / "satpy_config"
 WIB = dt.timezone(dt.timedelta(hours=7))
+# Penanda versi label di komentar JPEG; frame dengan label lama dibuat ulang bertahap.
+LABEL_TAG = b"YD1BUX label v2"
 
 
 # ---------------------------------------------------------------- daftar file di S3
@@ -135,20 +137,22 @@ def draw_lines(img, area_res, scale):
                 draw.line(pts, fill=color, width=width)
 
 
-def draw_label(img, t, product):
+def draw_label(img, t):
+    """Label kecil di pojok kanan atas: GK2A AMI <tanggal jam WIB> YD1BUX."""
     draw = ImageDraw.Draw(img)
-    size = max(14, img.width // 70)
+    size = max(12, img.width // 110)
     try:
         font = ImageFont.load_default(size=size)
     except TypeError:  # Pillow lama
         font = ImageFont.load_default()
-    text = (f"GK2A AMI  {t:%Y-%m-%d %H:%M} UTC  ({t.astimezone(WIB):%H:%M} WIB)  "
-            f"{product}  data: KMA/NMSC via NOAA")
+    text = f"GK2A AMI  {t.astimezone(WIB):%Y-%m-%d %H:%M} WIB  YD1BUX"
     pad = size // 2
-    box = draw.textbbox((pad, pad), text, font=font)
-    draw.rectangle((box[0] - pad // 2, box[1] - pad // 2, box[2] + pad // 2, box[3] + pad // 2),
+    left, top, right, bottom = draw.textbbox((0, 0), text, font=font)
+    x = img.width - pad - right
+    y = pad - top
+    draw.rectangle((x + left - pad // 2, y + top - pad // 2, x + right + pad // 2, y + bottom + pad // 2),
                    fill=(0, 0, 0))
-    draw.text((pad, pad), text, fill=(255, 255, 255), font=font)
+    draw.text((x, y), text, fill=(255, 255, 255), font=font)
 
 
 def make_frame(t, channel_keys, products, res, width, out_path):
@@ -170,8 +174,8 @@ def make_frame(t, channel_keys, products, res, width, out_path):
     else:
         scale = 1.0
     draw_lines(img, res, scale)
-    draw_label(img, t, product)
-    img.save(out_path, quality=88, optimize=True)
+    draw_label(img, t)
+    img.save(out_path, quality=88, optimize=True, comment=LABEL_TAG)
     return True
 
 
@@ -184,6 +188,11 @@ def is_blank(path):
         px = im.get_flattened_data() if hasattr(im, "get_flattened_data") else im.getdata()
         dark = sum(1 for p in px if max(p) < 12)
         return dark / (im.width * im.height) > 0.5
+
+
+def has_current_label(path):
+    with Image.open(path) as im:
+        return im.info.get("comment") == LABEL_TAG
 
 
 def frame_time(path):
@@ -259,9 +268,10 @@ def main():
         if is_blank(f):
             log.warning("%s hampir seluruhnya hitam; dihapus dan dibuat ulang", f.name)
             f.unlink()
-    existing = {frame_time(f) for f in frames_dir.glob("gk2a_*.jpg")}
+    # Frame berlabel lama tetap dipakai sampai versi barunya selesai dibuat (ditimpa).
+    existing = {frame_time(f) for f in frames_dir.glob("gk2a_*.jpg") if has_current_label(f)}
     todo = sorted((t for t in scenes if t not in existing), reverse=True)[:args.max_new]
-    log.info("%d scene tersedia, %d frame sudah ada, memproses %d", len(scenes), len(existing), len(todo))
+    log.info("%d scene tersedia, %d frame terkini, memproses %d", len(scenes), len(existing), len(todo))
 
     for t in todo:
         ch = scenes[t]
