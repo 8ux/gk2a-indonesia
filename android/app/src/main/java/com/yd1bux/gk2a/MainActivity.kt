@@ -238,7 +238,8 @@ class MainActivity : Activity() {
                 for ((n, frame) in todo.withIndex()) {
                     if (gen != generation) return@execute
                     val bmp = try {
-                        repo.decodePreview(repo.fileFor(frame), width)
+                        val file = repo.fileFor(frame)
+                        if (repo.isBlank(file)) null else repo.decodePreview(file, width)
                     } catch (e: Exception) {
                         null // satu frame gagal (mis. belum ada di arsip) tidak menghentikan yang lain
                     }

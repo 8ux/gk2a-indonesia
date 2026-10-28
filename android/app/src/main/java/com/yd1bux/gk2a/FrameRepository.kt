@@ -14,6 +14,7 @@ import java.time.LocalDateTime
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import java.util.Collections
 
 data class Frame(val time: Instant, val url: String) {
     val fileName: String get() = url.substringAfterLast('/')
@@ -29,6 +30,9 @@ class FrameRepository(private val baseUrl: String, cacheRoot: File) {
 
     private val cacheDir = File(cacheRoot, "frames").apply { mkdirs() }
     private val stampFormat = DateTimeFormatter.ofPattern("yyyyMMddHHmm")
+
+    /** File cache yang sudah dicek tidak hitam pada sesi ini. */
+    private val verified: MutableSet<String> = Collections.synchronizedSet(HashSet())
 
     fun fetchManifest(): FrameManifest {
         val json = getJson("frames.json")
@@ -60,14 +64,32 @@ class FrameRepository(private val baseUrl: String, cacheRoot: File) {
     /** File lokal frame; diunduh dulu bila belum ada di cache. */
     fun fileFor(frame: Frame): File {
         val file = File(cacheDir, frame.fileName)
+        // Salinan lama yang hitam (server sudah memperbaikinya dengan nama file yang sama): unduh ulang.
+        if (file.exists() && frame.fileName !in verified && isBlank(file)) file.delete()
         if (!file.exists()) {
             val tmp = File(cacheDir, frame.fileName + ".part")
             val url = if (frame.url.startsWith("http")) frame.url else baseUrl + frame.url
             tmp.writeBytes(get(url))
             if (!tmp.renameTo(file)) throw IOException("Cannot write ${file.name}")
         }
+        verified += frame.fileName
         file.setLastModified(System.currentTimeMillis())
         return file
+    }
+
+    /** Frame rusak yang hampir seluruhnya hitam (lebih dari separuh piksel). */
+    fun isBlank(file: File): Boolean {
+        val bmp = BitmapFactory.decodeFile(file.path, BitmapFactory.Options().apply { inSampleSize = 16 })
+            ?: return false
+        var dark = 0
+        var total = 0
+        for (y in 0 until bmp.height step 2) for (x in 0 until bmp.width step 2) {
+            val c = bmp.getPixel(x, y)
+            if (maxOf((c shr 16) and 0xFF, (c shr 8) and 0xFF, c and 0xFF) < 12) dark++
+            total++
+        }
+        bmp.recycle()
+        return total > 0 && dark * 2 > total
     }
 
     /** Batasi ukuran cache: hapus file terlama yang tidak sedang dipakai. */

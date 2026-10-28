@@ -35,10 +35,12 @@ class GifMaker(private val repo: FrameRepository) {
     }
 
     fun make(frames: List<Frame>, o: GifOptions, out: OutputStream, progress: (Phase, Int, Int) -> Unit) {
+        // Frame yang hitam (rusak) dilewati supaya tidak mengganggu animasi.
         val files = frames.mapIndexed { i, f ->
             progress(Phase.DOWNLOAD, i + 1, frames.size)
             repo.fileFor(f)
-        }
+        }.filterNot { repo.isBlank(it) }
+        if (files.size < 2) throw IllegalStateException("not enough frames")
         val (fw, fh) = repo.dimensions(files[0])
         val c = o.crop ?: RectF(0f, 0f, 1f, 1f)
         val region = Rect(
