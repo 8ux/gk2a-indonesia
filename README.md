@@ -54,6 +54,25 @@ lalu `true_color_raw`.
 5. Citra bisa dilihat di `https://USERNAME.github.io/gk2a-indonesia/`.
    Animasi penuh 3 jam akan terisi dalam sekitar 1 jam pertama.
 
+## Pemicu tepat waktu dengan cron-job.org
+
+Jadwal bawaan GitHub Actions sering molor atau terlewat. Supaya citra diperbarui tepat tiap 10 menit,
+workflow dipicu dari luar oleh [cron-job.org](https://cron-job.org) (gratis) lewat API GitHub.
+
+1. **Buat token GitHub**: https://github.com/settings/personal-access-tokens/new
+   - Repository access: *Only select repositories* → `gk2a-indonesia`
+   - Permissions → Repository permissions → **Actions: Read and write** (yang lain biarkan)
+2. **Buat cron job** di cron-job.org (*Create cronjob*):
+   - URL: `https://api.github.com/repos/8ux/gk2a-indonesia/actions/workflows/gk2a.yml/dispatches`
+   - Schedule: *Custom*, menit `4,14,24,34,44,54`, setiap jam, setiap hari
+   - Tab *Advanced*: Request method **POST**, request body `{"ref":"main"}`, dan header:
+     - `Authorization: Bearer <token>`
+     - `Accept: application/vnd.github+json`
+     - `Content-Type: application/json`
+     - `X-GitHub-Api-Version: 2022-11-28`
+3. Jawaban sukses dari GitHub adalah **HTTP 204** (tanpa isi). Jadwal bawaan GitHub tetap ada sebagai cadangan;
+   run ganda tidak masalah karena run berikutnya menunggu dan hanya memproses frame yang belum ada.
+
 ## Arsip citra
 
 Setiap frame juga disimpan ke **GitHub Releases**, satu release per hari (`archive-YYYYMMDD`, waktu UTC),
