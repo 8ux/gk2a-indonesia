@@ -22,12 +22,12 @@ concurrency:
 
 jobs:
   update:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # versi tetap, supaya tidak ikut migrasi otomatis ke Ubuntu 26
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
           cache: pip
@@ -37,8 +37,8 @@ jobs:
           command -v ffmpeg || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)
           pip install -r requirements.txt
 
-      # Tabel koreksi Rayleigh (pyspectral) & citra Black Marble (satpy) cukup diunduh sekali.
-      - uses: actions/cache@v4
+      # Tabel koreksi Rayleigh & kurva respons sensor (pyspectral) cukup diunduh sekali.
+      - uses: actions/cache@v6
         with:
           path: |
             ~/.local/share/pyspectral
@@ -61,7 +61,7 @@ jobs:
             --max-new "${{ inputs.max_new || '3' }}"
 
       - name: Publikasikan ke GitHub Pages (branch gh-pages)
-        uses: peaceiris/actions-gh-pages@v4
+        uses: peaceiris/actions-gh-pages@v4.1.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./site

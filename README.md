@@ -26,9 +26,12 @@ AWS S3 (NOAA, data GK2A L1B) ──HTTP range──▶ GitHub Actions (Python + 
 | `frames/gk2a_YYYYMMDDHHMM.jpg` | Frame per 10 menit |
 | `frames.json` | Daftar frame dan waktunya, untuk dipakai aplikasi Android nanti |
 
-Produk default adalah `true_color_with_night_ir`. Siang hari tampil **true color** (dengan koreksi Rayleigh).
-Malam hari tampil awan inframerah di atas citra lampu kota (NASA Black Marble), jadi animasinya tetap berguna 24 jam.
-Kalau produk itu gagal dibuat, skrip otomatis mencoba `true_color`, lalu `true_color_raw`.
+Produk default adalah `true_color_night_clouds`, komposit buatan sendiri di `satpy_config/`.
+Siang hari tampil **true color** (dengan koreksi Rayleigh). Malam hari tampil awan inframerah IR10.5:
+awan dingin berwarna putih, permukaan hangat biru gelap. Transisinya mulus di garis terminator,
+jadi animasinya tetap berguna 24 jam. Komposit ini tidak butuh data tambahan dari internet.
+Kalau produk default gagal dibuat, skrip otomatis mencoba `true_color_raw_night_clouds`, lalu `true_color`,
+lalu `true_color_raw`.
 
 ## Cara memasang
 
@@ -60,7 +63,7 @@ python scripts/gk2a_indonesia.py --site site --hours 3 --max-new 3
 
 Opsi penting:
 - `--hours`: panjang animasi.
-- `--product`: pilih `true_color_with_night_ir`, `true_color`, atau `true_color_raw`.
+- `--product`: pilih `true_color_night_clouds`, `true_color_raw_night_clouds`, `true_color`, atau `true_color_raw`.
 - `--res`: resolusi pemrosesan dalam derajat.
 - `--width`: lebar frame.
 - `--end YYYYmmddHHMM`: membuat citra untuk waktu lampau.

@@ -1,0 +1,30 @@
+# Komposit tambahan untuk GK2A AMI: true color di siang hari, awan inframerah di malam hari.
+# Tidak butuh data pendukung dari internet (beda dengan true_color_with_night_ir bawaan satpy).
+sensor_name: visir/ami
+
+composites:
+  night_ir_clouds:
+    compositor: !!python/name:satpy.composites.core.GenericCompositor
+    standard_name: night_ir_clouds
+    prerequisites:
+      - IR105
+      - IR105
+      - IR105
+
+  true_color_night_clouds:
+    compositor: !!python/name:satpy.composites.fill.DayNightCompositor
+    standard_name: true_color_night_clouds
+    lim_low: 85
+    lim_high: 92
+    prerequisites:
+      - true_color
+      - night_ir_clouds
+
+  true_color_raw_night_clouds:
+    compositor: !!python/name:satpy.composites.fill.DayNightCompositor
+    standard_name: true_color_night_clouds
+    lim_low: 85
+    lim_high: 92
+    prerequisites:
+      - true_color_raw
+      - night_ir_clouds

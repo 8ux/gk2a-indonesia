@@ -37,10 +37,12 @@ PREFIX = "AMI/L1B/FD"
 INDONESIA_BBOX = (94.0, -11.5, 142.0, 8.0)
 
 # Kanal yang dibutuhkan tiap produk satpy (nama kanal di nama file GK2A).
+# Urutan = urutan fallback bila produk gagal (mis. tabel koreksi Rayleigh gagal diunduh).
+# Komposit *_night_clouds didefinisikan di satpy_config/composites/ami.yaml.
 DAY_CHANNELS = ["vi004", "vi005", "vi006", "vi008"]
-NIGHT_CHANNELS = ["sw038", "ir105", "ir123"]
 PRODUCT_CHANNELS = {
-    "true_color_with_night_ir": DAY_CHANNELS + NIGHT_CHANNELS,
+    "true_color_night_clouds": DAY_CHANNELS + ["ir105"],
+    "true_color_raw_night_clouds": DAY_CHANNELS + ["ir105"],
     "true_color": DAY_CHANNELS,
     "true_color_raw": DAY_CHANNELS,
 }
@@ -48,6 +50,7 @@ FILE_RE = re.compile(r"gk2a_ami_le1b_([a-z]{2}\d{3})_fd\d{3}ge_(\d{12})\.nc$")
 
 ROOT = Path(__file__).resolve().parent.parent
 LINES_FILE = ROOT / "data" / "indonesia_lines.json"
+SATPY_CONFIG = ROOT / "satpy_config"
 WIB = dt.timezone(dt.timedelta(hours=7))
 
 
@@ -94,10 +97,12 @@ def make_area(res):
 
 def render(keys, product, area):
     """Baca scene langsung dari S3, potong wilayah Indonesia, kembalikan PIL.Image RGB."""
+    import satpy
     from satpy import Scene
     from satpy.readers.core.remote import FSFile
     from satpy.writers import get_enhanced_image
 
+    satpy.config.set(config_path=[str(SATPY_CONFIG)])
     fs = fsspec.filesystem("http", client_kwargs={"trust_env": True})
     files = [FSFile(fs.open(f"{BUCKET_URL}/{k}", block_size=8 * 2**20, cache_type="blockcache"), fs)
              for k in keys]
@@ -218,8 +223,8 @@ def main():
     p.add_argument("--site", default="site", type=Path, help="folder output situs")
     p.add_argument("--hours", type=float, default=3, help="panjang animasi (jam)")
     p.add_argument("--max-new", type=int, default=3, help="maksimum frame baru per eksekusi")
-    p.add_argument("--product", default="true_color_with_night_ir", choices=list(PRODUCT_CHANNELS),
-                   help="produk satpy (otomatis turun ke true_color / true_color_raw bila gagal)")
+    p.add_argument("--product", default="true_color_night_clouds", choices=list(PRODUCT_CHANNELS),
+                   help="produk satpy (otomatis turun ke produk berikutnya bila gagal)")
     p.add_argument("--res", type=float, default=0.01, help="resolusi pemrosesan (derajat)")
     p.add_argument("--width", type=int, default=2400, help="lebar frame JPEG (piksel)")
     p.add_argument("--anim-width", type=int, default=1280, help="lebar animasi MP4 (piksel)")

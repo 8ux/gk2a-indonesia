@@ -1,0 +1,16 @@
+enhancements:
+  # Awan dingin (205 K) putih, permukaan hangat (~300 K) biru gelap.
+  night_ir_clouds:
+    standard_name: night_ir_clouds
+    operations:
+      - name: stretch
+        method: !!python/name:satpy.enhancements.contrast.stretch
+        kwargs:
+          stretch: crude
+          min_stretch: [300, 300, 312]
+          max_stretch: [205, 205, 205]
+
+  # Input DayNightCompositor sudah di-enhance, jangan di-stretch lagi.
+  true_color_night_clouds:
+    standard_name: true_color_night_clouds
+    operations: []
