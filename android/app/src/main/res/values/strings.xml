@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">YD1BUX-gk2a</string>
+    <string name="data_base_url" translatable="false">https://8ux.github.io/gk2a-indonesia/</string>
+    <string name="subtitle">GK2A true color · Indonesia</string>
+    <string name="loading_manifest">Checking for new images…</string>
+    <string name="loading_frames">Loading frames %1$d/%2$d…</string>
+    <string name="status_ready">%1$d frames · updated %2$s</string>
+    <string name="error_network">Could not load images. Check your internet connection.</string>
+    <string name="retry">Retry</string>
+    <string name="refresh">Refresh</string>
+    <string name="save">Save image</string>
+    <string name="saved">Saved to Pictures/YD1BUX-gk2a</string>
+    <string name="save_failed">Could not save the image</string>
+    <string name="play">Play</string>
+    <string name="pause">Pause</string>
+    <string name="previous">Previous frame</string>
+    <string name="next">Next frame</string>
+    <string name="speed">Animation speed</string>
+    <string name="hint">Pinch to zoom · double-tap to zoom in or reset</string>
+    <string name="source">Data: GK2A AMI (KMA/NMSC) via NOAA Open Data</string>
+</resources>

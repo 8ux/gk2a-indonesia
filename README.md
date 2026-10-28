@@ -54,6 +54,40 @@ lalu `true_color_raw`.
 5. Citra bisa dilihat di `https://USERNAME.github.io/gk2a-indonesia/`.
    Animasi penuh 3 jam akan terisi dalam sekitar 1 jam pertama.
 
+## Aplikasi Android: YD1BUX-gk2a
+
+Kode aplikasi ada di folder `android/` (Kotlin, tanpa library tambahan). Setiap ada perubahan di folder itu,
+workflow **Android APK** membuat APK dan menerbitkannya di GitHub Releases.
+
+- Unduh APK terbaru: https://github.com/8ux/gk2a-indonesia/releases/latest/download/YD1BUX-gk2a.apk
+- Fitur: animasi frame 3 jam terakhir, pinch-zoom (otomatis memuat resolusi penuh saat dijeda),
+  pilihan kecepatan, simpan gambar ke galeri (Android 10+), dan cek citra baru otomatis tiap 5 menit.
+- Bahasa: Inggris, atau Indonesia bila bahasa HP diatur ke Bahasa Indonesia.
+- Minimal Android 8.0.
+
+**Tanda tangan APK.** Supaya versi baru bisa dipasang menimpa versi lama, setiap build harus ditandatangani dengan
+keystore yang sama. Keystore itu disimpan sebagai GitHub Secret, bukan di repo. Buat sekali di komputer Anda:
+
+```bash
+keytool -genkeypair -keystore yd1bux-gk2a.jks -storetype PKCS12 -alias yd1bux -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=YD1BUX-gk2a"
+```
+
+```bash
+base64 -w0 yd1bux-gk2a.jks | gh secret set SIGNING_KEYSTORE_B64 --repo 8ux/gk2a-indonesia
+```
+
+```bash
+gh secret set SIGNING_STORE_PASSWORD --repo 8ux/gk2a-indonesia
+```
+
+```bash
+gh secret set SIGNING_KEY_PASSWORD --repo 8ux/gk2a-indonesia
+```
+
+Isi kedua password dengan password yang Anda pakai saat `keytool`. Simpan file `yd1bux-gk2a.jks` di tempat aman
+dan jangan di-commit. Tanpa secret ini, APK ditandatangani dengan debug keystore yang berbeda tiap build,
+jadi aplikasi lama harus di-uninstall dulu sebelum memasang versi baru.
+
 ## Menjalankan di komputer sendiri
 
 ```bash

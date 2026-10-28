@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="id">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -26,32 +26,35 @@
 <body>
 <main>
   <h1>GK2A True Color: Indonesia</h1>
-  <div class="muted" id="status">Memuat…</div>
+  <div class="muted" id="status">Loading…</div>
 
   <div class="viewer">
-    <img id="frame" alt="Citra GK2A wilayah Indonesia">
+    <img id="frame" alt="GK2A satellite image of Indonesia">
     <div class="controls">
-      <button id="play" aria-label="Putar atau jeda">⏸</button>
-      <button id="prev" aria-label="Frame sebelumnya">◀</button>
-      <button id="next" aria-label="Frame berikutnya">▶</button>
-      <input id="slider" type="range" min="0" max="0" value="0" aria-label="Pilih frame">
+      <button id="play" aria-label="Play or pause">⏸</button>
+      <button id="prev" aria-label="Previous frame">◀</button>
+      <button id="next" aria-label="Next frame">▶</button>
+      <input id="slider" type="range" min="0" max="0" value="0" aria-label="Select frame">
       <span id="time"></span>
-      <select id="speed" aria-label="Kecepatan">
-        <option value="400">Lambat</option>
+      <select id="speed" aria-label="Animation speed">
+        <option value="400">Slow</option>
         <option value="200" selected>Normal</option>
-        <option value="100">Cepat</option>
+        <option value="100">Fast</option>
       </select>
     </div>
   </div>
 
   <div class="links">
-    <a href="latest.jpg">Citra terbaru (JPG)</a>
-    <a href="animation.mp4">Animasi MP4</a>
-    <a href="animation.gif">Animasi GIF</a>
+    <a href="latest.jpg">Latest image (JPG)</a>
+    <a href="animation.mp4">Animation (MP4)</a>
+    <a href="animation.gif">Animation (GIF)</a>
+    <a href="https://github.com/8ux/gk2a-indonesia/releases/latest/download/YD1BUX-gk2a.apk">Android app (APK)</a>
     <a href="frames.json">frames.json</a>
   </div>
-  <p class="muted">Sumber data: GEO-KOMPSAT-2A (KMA/NMSC), arsip publik NOAA Open Data Dissemination di AWS.
-     Diproses dengan Satpy. Malam hari ditampilkan awan inframerah (kanal 10.5 µm): awan dingin putih, permukaan biru gelap.</p>
+  <p class="muted">Data source: GEO-KOMPSAT-2A AMI Level 1B (KMA/NMSC), distributed by NOAA Open Data Dissemination on AWS.
+     Processed with Satpy every 10 minutes. Times are shown in WIB (UTC+7).
+     Daytime shows Rayleigh-corrected true color; at night, infrared clouds (10.5 µm channel) are shown:
+     cold cloud tops in white, warm surfaces in dark blue. Coastlines: Natural Earth.</p>
 </main>
 <script>
 const img = document.getElementById('frame'), slider = document.getElementById('slider'),
@@ -76,7 +79,7 @@ function show(i) {
 function schedule() {
   clearTimeout(timer);
   if (!playing) return;
-  // Jeda lebih lama di frame terbaru.
+  // Hold longer on the latest frame.
   const delay = idx === frames.length - 1 ? 1500 : +speedSel.value;
   timer = setTimeout(() => { show(idx + 1); schedule(); }, delay);
 }
@@ -93,11 +96,11 @@ fetch('frames.json?t=' + Date.now()).then(r => r.json()).then(m => {
   frames = m.frames;
   slider.max = frames.length - 1;
   cache = frames.map(f => { const im = new Image(); im.src = f.url; return im; });
-  statusEl.textContent = `${frames.length} frame · terakhir ${fmt(frames[frames.length - 1].time)} · ` +
-                         `diperbarui ${fmt(m.updated)}`;
+  statusEl.textContent = `${frames.length} frames · latest ${fmt(frames[frames.length - 1].time)} · ` +
+                         `updated ${fmt(m.updated)}`;
   show(frames.length - 1);
   schedule();
-}).catch(() => { statusEl.textContent = 'Gagal memuat frames.json'; });
+}).catch(() => { statusEl.textContent = 'Could not load frames.json. Please try again later.'; });
 </script>
 </body>
 </html>

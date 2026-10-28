@@ -1,3 +1,10 @@
 site/
 __pycache__/
 *.nc
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+*.apk
+*.jks
+*.keystore

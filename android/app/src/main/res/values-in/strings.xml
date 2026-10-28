@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="subtitle">GK2A true color · Indonesia</string>
+    <string name="loading_manifest">Memeriksa citra baru…</string>
+    <string name="loading_frames">Memuat frame %1$d/%2$d…</string>
+    <string name="status_ready">%1$d frame · diperbarui %2$s</string>
+    <string name="error_network">Gagal memuat citra. Periksa koneksi internet.</string>
+    <string name="retry">Coba lagi</string>
+    <string name="refresh">Muat ulang</string>
+    <string name="save">Simpan gambar</string>
+    <string name="saved">Tersimpan di Pictures/YD1BUX-gk2a</string>
+    <string name="save_failed">Gagal menyimpan gambar</string>
+    <string name="play">Putar</string>
+    <string name="pause">Jeda</string>
+    <string name="previous">Frame sebelumnya</string>
+    <string name="next">Frame berikutnya</string>
+    <string name="speed">Kecepatan animasi</string>
+    <string name="hint">Cubit untuk zoom · ketuk dua kali untuk zoom atau reset</string>
+    <string name="source">Data: GK2A AMI (KMA/NMSC) via NOAA Open Data</string>
+</resources>

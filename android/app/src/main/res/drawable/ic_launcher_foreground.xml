@@ -1,0 +1,18 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <!-- Bumi -->
+    <path android:fillColor="#FF1E6FA0"
+        android:pathData="M54,32a22,22 0,1 1,0 44a22,22 0,1 1,0 -44z" />
+    <!-- Daratan (sketsa kepulauan) -->
+    <path android:fillColor="#FF3FA66B"
+        android:pathData="M38,52c3,-2 7,-1 9,1s3,5 1,6s-6,0 -8,-2s-4,-3 -2,-5zM52,46c3,-1 6,0 7,2s-1,4 -3,4s-5,-1 -5,-3s0,-2 1,-3zM58,58c2,-1 5,0 7,1s3,3 1,4s-5,0 -7,-1s-3,-3 -1,-4zM46,64c3,0 8,1 11,1s2,2 -1,2s-8,0 -10,-1s-2,-2 0,-2z" />
+    <!-- Garis khatulistiwa & meridian -->
+    <path android:strokeColor="#66FFFFFF" android:strokeWidth="1.2" android:fillColor="#00000000"
+        android:pathData="M32,54h44M54,32c-8,6 -8,38 0,44M54,32c8,6 8,38 0,44" />
+    <!-- Satelit -->
+    <path android:fillColor="#FFF2D541"
+        android:pathData="M72,27h6v6h-6zM64,28h7v4h-7zM79,28h7v4h-7z" />
+    <path android:strokeColor="#FFF2D541" android:strokeWidth="1.2" android:fillColor="#00000000"
+        android:pathData="M75,33l-7,7" />
+</vector>
