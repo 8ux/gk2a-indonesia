@@ -74,7 +74,10 @@ workflow **Android APK** membuat APK dan menerbitkannya di GitHub Releases.
 - Fitur:
   - Animasi frame 3 jam terakhir, cek citra baru otomatis tiap 5 menit.
   - **Arsip**: pilih rentang tanggal & jam (WIB) dengan interval 10 menit, 30 menit, atau 1 jam (maks 144 frame).
-  - **Buat GIF** dari frame yang sedang ditampilkan (live atau arsip), simpan ke galeri, lalu bagikan.
+  - **Buat GIF** dari rentang tanggal & jam mana pun (arsip + frame live), dengan pilihan kecepatan
+    (lambat sampai sangat cepat), lebar 640/800/1080 px, transisi halus (crossfade), putar maju-mundur,
+    tahan di frame terbaru, dan potong ke area yang sedang di-zoom. Dialog menampilkan jumlah frame,
+    durasi, dan perkiraan ukuran file. GIF disimpan ke galeri lalu bisa langsung dibagikan.
   - Pinch-zoom (otomatis memuat resolusi penuh saat dijeda), pilihan kecepatan, simpan gambar ke galeri.
   - Simpan gambar dan GIF butuh Android 10+.
 - Bahasa: Inggris, atau Indonesia bila bahasa HP diatur ke Bahasa Indonesia.
