@@ -60,12 +60,18 @@ jobs:
             --hours "${{ inputs.hours || '3' }}" \
             --max-new "${{ inputs.max_new || '3' }}"
 
-      # Simpan frame ke GitHub Releases (arsip 30 hari) + tulis archive.json untuk aplikasi.
+      # Full disk + sektor (Asia Tenggara, Asia Timur, Australia, Pasifik Barat, Asia Selatan).
+      # Frame-nya tidak masuk GitHub Pages, langsung diarsipkan ke GitHub Releases.
+      - name: Proses full disk & sektor
+        continue-on-error: true
+        run: python scripts/gk2a_sectors.py --site site --out sectors --max-new 1
+
+      # Simpan frame ke GitHub Releases + tulis archive.json untuk aplikasi.
       - name: Arsipkan frame
         continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: python scripts/archive.py --site site --days 30
+        run: python scripts/archive.py --site site --days 30 --sectors-dir sectors --sector-days 7
 
       - name: Publikasikan ke GitHub Pages (branch gh-pages)
         uses: peaceiris/actions-gh-pages@v4.1.0

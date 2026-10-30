@@ -54,6 +54,19 @@ lalu `true_color_raw`.
 5. Citra bisa dilihat di `https://USERNAME.github.io/gk2a-indonesia/`.
    Animasi penuh 3 jam akan terisi dalam sekitar 1 jam pertama.
 
+## Full disk & sektor
+
+Selain Indonesia, setiap 10 menit dibuat juga **Full Disk** (seluruh bulatan bumi yang terlihat GK2A dari 128,2° BT)
+dan lima sektor yang dipotong dari full disk dalam proyeksi asli satelit (lengkung bumi tetap terlihat):
+Asia Tenggara, Asia Timur, Australia, Pasifik Barat, dan Asia Selatan (`scripts/gk2a_sectors.py`).
+
+- Satu full disk 2 km butuh 5 kanal yang diunduh utuh (~870 MB dari AWS, ±20 detik) dan sekitar 1,5 menit pemrosesan.
+- Frame full disk & sektor tidak disimpan di GitHub Pages, tetapi langsung di GitHub Releases
+  (`sectors-YYYYMMDD`, disimpan 7 hari) dan didaftarkan di `archive.json` per produk.
+- Di aplikasi dan viewer web, wilayah dipilih lewat menu di bagian atas.
+- GK2A adalah satelit geostasioner, jadi yang terlihat selalu belahan bumi yang sama
+  (kira-kira India sampai Pasifik tengah, Siberia sampai Selandia Baru).
+
 ## Pemicu tepat waktu dengan cron-job.org
 
 Jadwal bawaan GitHub Actions sering molor atau terlewat. Supaya citra diperbarui tepat tiap 10 menit,

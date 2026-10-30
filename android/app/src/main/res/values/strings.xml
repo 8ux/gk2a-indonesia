@@ -58,4 +58,12 @@
     <string name="gif_failed">Could not create the GIF</string>
     <string name="gif_need_frames">Wait until at least 2 frames are loaded</string>
     <string name="share">Share</string>
+    <string name="choose_area">Choose area</string>
+    <string name="product_indonesia">Indonesia</string>
+    <string name="product_fd">Full Disk (whole Earth)</string>
+    <string name="product_sea">Southeast Asia</string>
+    <string name="product_eas">East Asia</string>
+    <string name="product_aus">Australia</string>
+    <string name="product_wpac">Western Pacific</string>
+    <string name="product_sas">South Asia</string>
 </resources>

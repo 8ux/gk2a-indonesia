@@ -8,3 +8,4 @@ android/local.properties
 *.apk
 *.jks
 *.keystore
+sectors/

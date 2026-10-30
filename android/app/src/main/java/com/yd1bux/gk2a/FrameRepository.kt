@@ -22,8 +22,10 @@ data class Frame(val time: Instant, val url: String) {
 
 data class FrameManifest(val updated: Instant?, val frames: List<Frame>)
 
-/** Arsip harian di GitHub Releases: daftar waktu frame yang tersedia + pola URL-nya. */
-data class ArchiveIndex(val frames: List<Frame>)
+/** Arsip di GitHub Releases: daftar frame per produk (indonesia, fd, sea, ...). */
+data class ArchiveIndex(val updated: Instant?, val products: Map<String, List<Frame>>) {
+    fun frames(product: String): List<Frame> = products[product].orEmpty()
+}
 
 /** Mengambil frames.json, archive.json dan file JPEG, dengan cache di penyimpanan aplikasi. */
 class FrameRepository(private val baseUrl: String, cacheRoot: File) {
@@ -47,8 +49,22 @@ class FrameRepository(private val baseUrl: String, cacheRoot: File) {
 
     fun fetchArchive(): ArchiveIndex {
         val json = getJson("archive.json")
-        val template = json.getString("url_template")
-        val days = json.getJSONObject("days")
+        val products = LinkedHashMap<String, List<Frame>>()
+        val list = json.optJSONObject("products")
+        if (list != null) {
+            for (pid in list.keys()) {
+                val p = list.getJSONObject(pid)
+                products[pid] = parseDays(p.getString("url_template"), p.getJSONObject("days"))
+            }
+        } else {
+            // archive.json format lama: hanya Indonesia
+            products[INDONESIA] = parseDays(json.getString("url_template"), json.getJSONObject("days"))
+        }
+        val updated = json.optString("updated").takeIf { it.isNotEmpty() }?.let(::parseTime)
+        return ArchiveIndex(updated, products)
+    }
+
+    private fun parseDays(template: String, days: JSONObject): List<Frame> {
         val frames = ArrayList<Frame>()
         for (day in days.keys()) {
             val times = days.getJSONArray(day)
@@ -58,7 +74,7 @@ class FrameRepository(private val baseUrl: String, cacheRoot: File) {
                 frames += Frame(time, template.replace("{date}", day).replace("{time}", hhmm))
             }
         }
-        return ArchiveIndex(frames.sortedBy { it.time })
+        return frames.sortedBy { it.time }
     }
 
     /** File lokal frame; diunduh dulu bila belum ada di cache. */
@@ -147,11 +163,13 @@ class FrameRepository(private val baseUrl: String, cacheRoot: File) {
         }
     }
 
-    private fun sampleSize(file: File, targetWidth: Int): Int {
+    /** Faktor perkecil supaya sisi terpanjang gambar tidak kurang dari [target] (full disk berbentuk persegi). */
+    private fun sampleSize(file: File, target: Int): Int {
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeFile(file.path, bounds)
+        val longest = maxOf(bounds.outWidth, bounds.outHeight)
         var sample = 1
-        while (bounds.outWidth / (sample * 2) >= targetWidth) sample *= 2
+        while (longest / (sample * 2) >= target) sample *= 2
         return sample
     }
 
@@ -177,6 +195,7 @@ class FrameRepository(private val baseUrl: String, cacheRoot: File) {
     private fun parseTime(s: String): Instant = OffsetDateTime.parse(s).toInstant()
 
     companion object {
+        const val INDONESIA = "indonesia"
         private const val MAX_CACHE_BYTES = 300L * 1024 * 1024
     }
 }

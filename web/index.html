@@ -9,7 +9,9 @@
   * { box-sizing: border-box; }
   body { margin:0; background:var(--bg); color:var(--text); font:15px/1.5 system-ui, sans-serif; }
   main { max-width:1400px; margin:0 auto; padding:16px; }
-  h1 { font-size:20px; margin:0 0 4px; }
+  h1 { font-size:20px; margin:0; }
+  .head { display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin-bottom:4px; }
+  #area { font-weight:600; }
   .muted { color:var(--muted); font-size:13px; }
   .viewer { margin-top:12px; background:var(--panel); border:1px solid var(--line); border-radius:8px; overflow:hidden; }
   .viewer img { display:block; width:100%; height:auto; background:#000; }
@@ -25,11 +27,16 @@
 </head>
 <body>
 <main>
-  <h1>GK2A True Color: Indonesia</h1>
+  <div class="head">
+    <h1>GK2A True Color</h1>
+    <select id="area" aria-label="Area">
+      <option value="indonesia">Indonesia</option>
+    </select>
+  </div>
   <div class="muted" id="status">Loading…</div>
 
   <div class="viewer">
-    <img id="frame" alt="GK2A satellite image of Indonesia">
+    <img id="frame" alt="GK2A satellite image">
     <div class="controls">
       <button id="play" aria-label="Play or pause">⏸</button>
       <button id="prev" aria-label="Previous frame">◀</button>
@@ -92,15 +99,57 @@ document.getElementById('next').onclick = () => { setPlaying(false); show(idx + 
 slider.oninput = () => { setPlaying(false); show(+slider.value); };
 speedSel.onchange = schedule;
 
-fetch('frames.json?t=' + Date.now()).then(r => r.json()).then(m => {
-  frames = m.frames;
+const areaSel = document.getElementById('area');
+let archive = null;
+
+function start(list, updated) {
+  frames = list;
+  if (!frames.length) { statusEl.textContent = 'No images yet for this area. Please try again later.'; return; }
   slider.max = frames.length - 1;
   cache = frames.map(f => { const im = new Image(); im.src = f.url; return im; });
   statusEl.textContent = `${frames.length} frames · latest ${fmt(frames[frames.length - 1].time)} · ` +
-                         `updated ${fmt(m.updated)}`;
+                         `updated ${fmt(updated)}`;
   show(frames.length - 1);
   schedule();
-}).catch(() => { statusEl.textContent = 'Could not load frames.json. Please try again later.'; });
+}
+
+// Full disk & sectors: last 3 hours from the archive (GitHub Releases).
+function archiveFrames(id) {
+  const p = archive.products[id];
+  const list = [];
+  for (const [day, times] of Object.entries(p.days)) {
+    for (const t of times) {
+      list.push({
+        time: `${day.slice(0, 4)}-${day.slice(4, 6)}-${day.slice(6)}T${t.slice(0, 2)}:${t.slice(2)}:00Z`,
+        url: p.url_template.replace(/\{date\}/g, day).replace('{time}', t),
+      });
+    }
+  }
+  list.sort((a, b) => a.time.localeCompare(b.time));
+  return list.slice(-18);
+}
+
+function loadArea(id) {
+  clearTimeout(timer);
+  statusEl.textContent = 'Loading…';
+  if (id === 'indonesia') {
+    fetch('frames.json?t=' + Date.now()).then(r => r.json())
+      .then(m => start(m.frames, m.updated))
+      .catch(() => { statusEl.textContent = 'Could not load frames.json. Please try again later.'; });
+  } else {
+    start(archiveFrames(id), archive.updated);
+  }
+}
+
+areaSel.onchange = () => loadArea(areaSel.value);
+loadArea('indonesia');
+fetch('archive.json?t=' + Date.now()).then(r => r.json()).then(a => {
+  archive = a;
+  for (const [id, p] of Object.entries(a.products || {})) {
+    if (id === 'indonesia') continue;
+    areaSel.add(new Option(p.name, id));
+  }
+}).catch(() => {});
 </script>
 </body>
 </html>

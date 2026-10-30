@@ -44,7 +44,7 @@ class MainActivity : Activity() {
 
     /** Live = 3 jam terakhir dari frames.json; Archive = rentang pilihan dari archive.json. */
     private sealed class Mode {
-        object Live : Mode()
+        class Live(val product: String) : Mode()
         class Archive(val frames: List<Frame>, val label: String) : Mode()
     }
 
@@ -63,7 +63,10 @@ class MainActivity : Activity() {
     private val decoder = Executors.newSingleThreadExecutor()
     private val worker = Executors.newSingleThreadExecutor()
 
-    private var mode: Mode = Mode.Live
+    private var mode: Mode = Mode.Live(FrameRepository.INDONESIA)
+    /** Wilayah yang ditampilkan: indonesia, fd (full disk), sea, eas, aus, wpac, sas. */
+    private var product = FrameRepository.INDONESIA
+    private lateinit var productButton: TextView
     @Volatile private var generation = 0
     private var frames: List<Frame> = emptyList()
     private val previews = HashMap<String, Bitmap>()
@@ -110,6 +113,12 @@ class MainActivity : Activity() {
 
         image = findViewById(R.id.image)
         status = findViewById(R.id.status)
+        productButton = findViewById(R.id.product)
+        product = getPreferences(MODE_PRIVATE).getString(PREF_PRODUCT, null)
+            ?.takeIf { it in PRODUCTS.map { p -> p.first } } ?: FrameRepository.INDONESIA
+        productButton.text = "${productName(product)} ▾"
+        productButton.setOnClickListener { chooseProduct() }
+        mode = Mode.Live(product)
         timeText = findViewById(R.id.time)
         seek = findViewById(R.id.seek)
         playButton = findViewById(R.id.play)
@@ -118,7 +127,7 @@ class MainActivity : Activity() {
         errorBox = findViewById(R.id.errorBox)
 
         applyInsets(findViewById(R.id.root))
-        if (Build.VERSION.SDK_INT >= 33) backToLive = BackToLive(this) { setMode(Mode.Live) }
+        if (Build.VERSION.SDK_INT >= 33) backToLive = BackToLive(this) { setMode(Mode.Live(product)) }
 
         playButton.setOnClickListener { setPlaying(!playing) }
         findViewById<ImageButton>(R.id.prev).setOnClickListener { step(-1) }
@@ -126,7 +135,7 @@ class MainActivity : Activity() {
         findViewById<ImageButton>(R.id.refresh).setOnClickListener { load(showSpinner = true) }
         findViewById<ImageButton>(R.id.archive).setOnClickListener { openArchive() }
         findViewById<Button>(R.id.retry).setOnClickListener { load(showSpinner = true) }
-        status.setOnClickListener { if (mode is Mode.Archive) setMode(Mode.Live) }
+        status.setOnClickListener { if (mode is Mode.Archive) setMode(Mode.Live(product)) }
         speedButton.setOnClickListener {
             speedIndex = (speedIndex + 1) % SPEEDS.size
             speedButton.text = SPEEDS[speedIndex].first
@@ -175,7 +184,7 @@ class MainActivity : Activity() {
 
     @Deprecated("Dipakai hanya di Android < 13; versi baru memakai OnBackInvokedCallback")
     override fun onBackPressed() {
-        if (mode is Mode.Archive) setMode(Mode.Live) else super.onBackPressed()
+        if (mode is Mode.Archive) setMode(Mode.Live(product)) else super.onBackPressed()
     }
 
     private fun applyInsets(root: View) {
@@ -222,7 +231,14 @@ class MainActivity : Activity() {
         loader.execute {
             try {
                 val manifest = when (current) {
-                    is Mode.Live -> repo.fetchManifest()
+                    is Mode.Live -> if (current.product == FrameRepository.INDONESIA) {
+                        repo.fetchManifest()
+                    } else {
+                        val archive = repo.fetchArchive()
+                        val all = archive.frames(current.product)
+                        val since = all.lastOrNull()?.time?.minus(Duration.ofHours(LIVE_HOURS))
+                        FrameManifest(archive.updated, all.filter { since != null && !it.time.isBefore(since) })
+                    }
                     is Mode.Archive -> FrameManifest(null, current.frames)
                 }
                 if (gen != generation) return@execute
@@ -376,6 +392,28 @@ class MainActivity : Activity() {
         }
     }
 
+    // ------------------------------------------------------------------ wilayah
+
+    private fun productName(id: String) = PRODUCTS.firstOrNull { it.first == id }?.let { getString(it.second) } ?: id
+
+    private fun chooseProduct() {
+        val names = PRODUCTS.map { getString(it.second) }.toTypedArray()
+        val current = PRODUCTS.indexOfFirst { it.first == product }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.choose_area)
+            .setSingleChoiceItems(names, current) { dialog, which ->
+                dialog.dismiss()
+                val id = PRODUCTS[which].first
+                if (id == product && mode is Mode.Live) return@setSingleChoiceItems
+                product = id
+                getPreferences(MODE_PRIVATE).edit().putString(PREF_PRODUCT, id).apply()
+                productButton.text = "${productName(id)} ▾"
+                setMode(Mode.Live(id))
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
     // ------------------------------------------------------------------ arsip
 
     /** Ambil archive.json (boleh gagal) lalu jalankan [then] di thread UI. */
@@ -392,10 +430,10 @@ class MainActivity : Activity() {
     }
 
     private fun openArchive() = withArchive { index ->
-        if (index == null || index.frames.isEmpty()) {
+        if (index == null || index.frames(product).isEmpty()) {
             Toast.makeText(this, R.string.archive_unavailable, Toast.LENGTH_LONG).show()
         } else {
-            showArchiveDialog(index.frames)
+            showArchiveDialog(index.frames(product))
         }
     }
 
@@ -420,7 +458,7 @@ class MainActivity : Activity() {
             .setTitle(R.string.archive_title)
             .setView(ScrollView(this).apply { addView(box) })
             .setPositiveButton(R.string.show, null)
-            .setNeutralButton(R.string.live) { _, _ -> setMode(Mode.Live) }
+            .setNeutralButton(R.string.live) { _, _ -> setMode(Mode.Live(product)) }
             .setNegativeButton(android.R.string.cancel, null)
             .create()
         dialog.setOnShowListener {
@@ -467,7 +505,7 @@ class MainActivity : Activity() {
         val crop = image.visibleFraction()
         withArchive { index ->
             // Gabungkan arsip dan frame live (berdasarkan nama file, jadi tidak ada duplikat).
-            val all = ((index?.frames ?: emptyList()) + frames)
+            val all = ((index?.frames(product) ?: emptyList()) + frames)
                 .associateBy { it.fileName }.values.sortedBy { it.time }
             if (all.size < 2) {
                 toast(R.string.gif_need_frames)
@@ -577,7 +615,8 @@ class MainActivity : Activity() {
     private fun runGif(list: List<Frame>, o: GifOptions) {
         exporting = true
         setPlaying(false)
-        val name = "YD1BUX-gk2a_${stampFormat.format(list.first().time)}_${stampFormat.format(list.last().time)}.gif"
+        val name = "YD1BUX-gk2a_${product}_${stampFormat.format(list.first().time)}_" +
+            "${stampFormat.format(list.last().time)}.gif"
         status.text = getString(R.string.gif_download, 0, list.size)
         worker.execute {
             var uri: Uri? = null
@@ -650,6 +689,19 @@ class MainActivity : Activity() {
         private const val LAST_FRAME_PAUSE_MS = 1500L
         private const val AUTO_REFRESH_MS = 5 * 60 * 1000L
         private const val MAX_ARCHIVE_FRAMES = 144
+        private const val LIVE_HOURS = 3L
+        private const val PREF_PRODUCT = "product"
+
+        /** Wilayah yang tersedia (id di archive.json -> nama di layar). */
+        private val PRODUCTS = listOf(
+            FrameRepository.INDONESIA to R.string.product_indonesia,
+            "fd" to R.string.product_fd,
+            "sea" to R.string.product_sea,
+            "eas" to R.string.product_eas,
+            "aus" to R.string.product_aus,
+            "wpac" to R.string.product_wpac,
+            "sas" to R.string.product_sas,
+        )
     }
 }
 

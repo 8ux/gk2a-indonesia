@@ -56,4 +56,12 @@
     <string name="gif_failed">Gagal membuat GIF</string>
     <string name="gif_need_frames">Tunggu sampai minimal 2 frame dimuat</string>
     <string name="share">Bagikan</string>
+    <string name="choose_area">Pilih wilayah</string>
+    <string name="product_indonesia">Indonesia</string>
+    <string name="product_fd">Full Disk (seluruh bumi)</string>
+    <string name="product_sea">Asia Tenggara</string>
+    <string name="product_eas">Asia Timur</string>
+    <string name="product_aus">Australia</string>
+    <string name="product_wpac">Pasifik Barat</string>
+    <string name="product_sas">Asia Selatan</string>
 </resources>
