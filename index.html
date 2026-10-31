@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GK2A Indonesia</title>
+<style>
+  :root { --bg:#0d1117; --panel:#161b22; --text:#e6edf3; --muted:#8b949e; --accent:#58a6ff; --line:#30363d; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.5 system-ui, sans-serif; }
+  main { max-width:1400px; margin:0 auto; padding:16px; }
+  h1 { font-size:20px; margin:0; }
+  .head { display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin-bottom:4px; }
+  #area { font-weight:600; }
+  .muted { color:var(--muted); font-size:13px; }
+  .viewer { margin-top:12px; background:var(--panel); border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+  .viewer img { display:block; width:100%; height:auto; background:#000; }
+  .controls { display:flex; flex-wrap:wrap; gap:10px; align-items:center; padding:10px 12px; }
+  .controls input[type=range] { flex:1 1 200px; accent-color:var(--accent); }
+  button, select { background:var(--bg); color:var(--text); border:1px solid var(--line); border-radius:6px;
+                   padding:6px 12px; font:inherit; cursor:pointer; }
+  button:hover { border-color:var(--accent); }
+  #time { font-variant-numeric:tabular-nums; min-width:15ch; }
+  .links { margin-top:12px; display:flex; flex-wrap:wrap; gap:16px; }
+  a { color:var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <div class="head">
+    <h1>GK2A True Color</h1>
+    <select id="area" aria-label="Area">
+      <option value="indonesia">Indonesia</option>
+    </select>
+  </div>
+  <div class="muted" id="status">Loading…</div>
+
+  <div class="viewer">
+    <img id="frame" alt="GK2A satellite image">
+    <div class="controls">
+      <button id="play" aria-label="Play or pause">⏸</button>
+      <button id="prev" aria-label="Previous frame">◀</button>
+      <button id="next" aria-label="Next frame">▶</button>
+      <input id="slider" type="range" min="0" max="0" value="0" aria-label="Select frame">
+      <span id="time"></span>
+      <select id="speed" aria-label="Animation speed">
+        <option value="400">Slow</option>
+        <option value="200" selected>Normal</option>
+        <option value="100">Fast</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="links">
+    <a href="latest.jpg">Latest image (JPG)</a>
+    <a href="animation.mp4">Animation (MP4)</a>
+    <a href="animation.gif">Animation (GIF)</a>
+    <a href="https://github.com/8ux/gk2a-indonesia/releases/latest/download/YD1BUX-gk2a.apk">Android app (APK)</a>
+    <a href="frames.json">frames.json</a>
+  </div>
+  <p class="muted">Data source: GEO-KOMPSAT-2A AMI Level 1B (KMA/NMSC), distributed by NOAA Open Data Dissemination on AWS.
+     Processed with Satpy every 10 minutes. Times are shown in WIB (UTC+7).
+     Daytime shows Rayleigh-corrected true color; at night, infrared clouds (10.5 µm channel) are shown:
+     cold cloud tops in white, warm surfaces in dark blue. Coastlines: Natural Earth.</p>
+</main>
+<script>
+const img = document.getElementById('frame'), slider = document.getElementById('slider'),
+      timeEl = document.getElementById('time'), playBtn = document.getElementById('play'),
+      speedSel = document.getElementById('speed'), statusEl = document.getElementById('status');
+let frames = [], cache = [], idx = 0, playing = true, timer = null;
+
+const fmt = iso => {
+  const d = new Date(iso);
+  const wib = new Date(d.getTime() + 7 * 3600e3);
+  const p = n => String(n).padStart(2, '0');
+  return `${p(wib.getUTCDate())}/${p(wib.getUTCMonth() + 1)} ${p(wib.getUTCHours())}:${p(wib.getUTCMinutes())} WIB`;
+};
+
+function show(i) {
+  idx = (i + frames.length) % frames.length;
+  img.src = cache[idx].src;
+  slider.value = idx;
+  timeEl.textContent = fmt(frames[idx].time);
+}
+
+function schedule() {
+  clearTimeout(timer);
+  if (!playing) return;
+  // Hold longer on the latest frame.
+  const delay = idx === frames.length - 1 ? 1500 : +speedSel.value;
+  timer = setTimeout(() => { show(idx + 1); schedule(); }, delay);
+}
+
+function setPlaying(p) { playing = p; playBtn.textContent = p ? '⏸' : '▶︎'; schedule(); }
+
+playBtn.onclick = () => setPlaying(!playing);
+document.getElementById('prev').onclick = () => { setPlaying(false); show(idx - 1); };
+document.getElementById('next').onclick = () => { setPlaying(false); show(idx + 1); };
+slider.oninput = () => { setPlaying(false); show(+slider.value); };
+speedSel.onchange = schedule;
+
+const areaSel = document.getElementById('area');
+let archive = null;
+
+function start(list, updated) {
+  frames = list;
+  if (!frames.length) { statusEl.textContent = 'No images yet for this area. Please try again later.'; return; }
+  slider.max = frames.length - 1;
+  cache = frames.map(f => { const im = new Image(); im.src = f.url; return im; });
+  statusEl.textContent = `${frames.length} frames · latest ${fmt(frames[frames.length - 1].time)} · ` +
+                         `updated ${fmt(updated)}`;
+  show(frames.length - 1);
+  schedule();
+}
+
+// Full disk & sectors: last 3 hours from the archive (GitHub Releases).
+function archiveFrames(id) {
+  const p = archive.products[id];
+  const list = [];
+  for (const [day, times] of Object.entries(p.days)) {
+    for (const t of times) {
+      list.push({
+        time: `${day.slice(0, 4)}-${day.slice(4, 6)}-${day.slice(6)}T${t.slice(0, 2)}:${t.slice(2)}:00Z`,
+        url: p.url_template.replace(/\{date\}/g, day).replace('{time}', t),
+      });
+    }
+  }
+  list.sort((a, b) => a.time.localeCompare(b.time));
+  return list.slice(-18);
+}
+
+function loadArea(id) {
+  clearTimeout(timer);
+  statusEl.textContent = 'Loading…';
+  if (id === 'indonesia') {
+    fetch('frames.json?t=' + Date.now()).then(r => r.json())
+      .then(m => start(m.frames, m.updated))
+      .catch(() => { statusEl.textContent = 'Could not load frames.json. Please try again later.'; });
+  } else {
+    start(archiveFrames(id), archive.updated);
+  }
+}
+
+areaSel.onchange = () => loadArea(areaSel.value);
+loadArea('indonesia');
+fetch('archive.json?t=' + Date.now()).then(r => r.json()).then(a => {
+  archive = a;
+  for (const [id, p] of Object.entries(a.products || {})) {
+    if (id === 'indonesia') continue;
+    areaSel.add(new Option(p.name, id));
+  }
+}).catch(() => {});
+</script>
+</body>
+</html>
